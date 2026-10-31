@@ -1,0 +1,93 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP UP | Practice Makes Progress</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f2f8fa;margin:0;color:#173d52}
+header{background:#126b83;color:white;text-align:center;padding:28px}
+main{max-width:850px;margin:25px auto;padding:20px}
+.card{background:white;padding:22px;border-radius:12px;margin-bottom:18px;box-shadow:0 2px 8px #ddd}
+button{background:#087d83;color:white;border:0;border-radius:7px;padding:12px 22px;cursor:pointer}
+input{padding:12px;max-width:90%;border:1px solid #bbb;border-radius:6px}
+.question{padding:15px;border-bottom:1px solid #ddd}
+label{display:block;margin:10px 0}
+#quiz,#result{display:none}
+footer{text-align:center;padding:25px;font-size:13px;color:#666}
+</style>
+</head>
+<body>
+<header>
+<h1>STEP UP</h1>
+<h3>Practice Makes Progress</h3>
+<p>28th Secondary School</p>
+</header>
+<main>
+<section class="card" id="welcome">
+<h2>Welcome to STEP UP!</h2>
+<p>Enter your name to start your diagnostic test.</p>
+<input id="student" placeholder="Student name">
+<button onclick="start()">Start Test</button>
+</section>
+<section class="card" id="quiz">
+<h2>Diagnostic Test</h2>
+<p>Time remaining: <b id="timer"></b></p>
+<div id="questions"></div>
+<button onclick="submitTest()">Submit Answers</button>
+</section>
+<section class="card" id="result">
+<h2>Your Results</h2>
+<div id="feedback"></div>
+<button onclick="location.reload()">Try Again</button>
+</section>
+</main>
+<footer>
+Prepared by Mrs. Aishah Abdullah Alwagdani
+<p>STEP Practice Simulation – Not an Official Question Bank</p>
+</footer>
+<script>
+const questions=[
+{q:"She ___ English every day.",a:["study","studies","studying"],correct:1,why:"Use studies with she in the present simple."},
+{q:"If I had known, I ___ earlier.",a:["will come","would come","would have come"],correct:2,why:"The third conditional uses would have + past participle."},
+{q:"The word 'significant' means:",a:["important","ordinary","unclear"],correct:0,why:"Significant means important or meaningful."},
+{q:"Neither of the students ___ absent.",a:["are","is","were"],correct:1,why:"Neither takes a singular verb in formal English."},
+{q:"Choose the synonym of 'accurate'.",a:["precise","careless","temporary"],correct:0,why:"Accurate and precise both describe correctness."}
+];
+let seconds=questions.length*60;
+let interval;
+function start(){
+const name=document.getElementById("student").value.trim();
+if(!name){alert("Please enter your name.");return}
+document.getElementById("welcome").style.display="none";
+document.getElementById("quiz").style.display="block";
+document.getElementById("questions").innerHTML=questions.map((x,i)=>
+`<div class="question"><h3>${i+1}. ${x.q}</h3>`+
+x.a.map((a,j)=>`<label><input type="radio" name="q${i}" value="${j}"> ${a}</label>`).join("")+
+`</div>`).join("");
+tick();
+interval=setInterval(()=>{seconds--;tick();if(seconds<=0)submitTest()},1000);
+}
+function tick(){
+document.getElementById("timer").textContent=
+Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0");
+}
+function submitTest(){
+clearInterval(interval);
+document.getElementById("quiz").style.display="none";
+document.getElementById("result").style.display="block";
+let score=0;
+let output="";
+questions.forEach((x,i)=>{
+const chosen=document.querySelector(`input[name="q${i}"]:checked`);
+const answer=chosen?Number(chosen.value):-1;
+if(answer===x.correct)score++;
+output+=`<p><b>Question ${i+1}:</b> ${answer===x.correct?"Correct":"Incorrect"}<br>Correct answer: ${x.a[x.correct]}<br>${x.why}</p>`;
+});
+document.getElementById("feedback").innerHTML=
+`<h3>Score: ${score}/${questions.length}</h3>`+output;
+}
+</script>
+</body>
+</html>
