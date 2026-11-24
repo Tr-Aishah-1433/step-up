@@ -3,91 +3,669 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>STEP UP | Practice Makes Progress</title>
 <style>
-body{font-family:Arial,sans-serif;background:#f2f8fa;margin:0;color:#173d52}
-header{background:#126b83;color:white;text-align:center;padding:28px}
-main{max-width:850px;margin:25px auto;padding:20px}
-.card{background:white;padding:22px;border-radius:12px;margin-bottom:18px;box-shadow:0 2px 8px #ddd}
-button{background:#087d83;color:white;border:0;border-radius:7px;padding:12px 22px;cursor:pointer}
-input{padding:12px;max-width:90%;border:1px solid #bbb;border-radius:6px}
-.question{padding:15px;border-bottom:1px solid #ddd}
-label{display:block;margin:10px 0}
-#quiz,#result{display:none}
-footer{text-align:center;padding:25px;font-size:13px;color:#666}
+*{box-sizing:border-box}
+body{margin:0;background:#eef5f7;color:#173d52;font:16px/1.65 Arial,sans-serif}
+header{background:linear-gradient(125deg,#103d55,#087f82);color:white;text-align:center;padding:30px 15px}
+header h1{font-size:44px;letter-spacing:5px;margin:8px}
+header h2{font-size:20px;margin:0}
+main{max-width:1250px;margin:auto;padding:20px}
+.card{background:white;border-radius:14px;padding:24px;margin-bottom:20px;box-shadow:0 4px 16px #173d5210}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.model{border:1px solid #c8dce2;padding:20px;border-radius:12px;background:#f7fcfc}
+button{background:#087f82;color:white;border:0;padding:12px 20px;border-radius:8px;font-size:16px;cursor:pointer;margin:5px 0}
+button:hover{background:#075e65}
+button:disabled{opacity:.5;cursor:not-allowed}
+.secondary{background:#38566c}
+input[type=text],select{width:100%;padding:13px;border:1px solid #b9cbd2;border-radius:8px;font-size:16px;margin:7px 0 15px}
+.question{padding:16px 0;border-bottom:1px solid #dbe6ea}
+.option{display:block;border:1px solid #dbe6ea;padding:10px;margin:8px 0;border-radius:8px;cursor:pointer}
+.option:hover{background:#edf9f8}
+.option:has(input:checked){background:#d6f1ee;border-color:#087f82}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.passage{background:#f4f8fa;padding:22px;border-radius:12px;align-self:start;position:sticky;top:90px}
+.timerbar{position:sticky;top:0;background:#103d55;color:white;padding:14px;z-index:5;border-radius:8px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.timer{font-size:22px;font-weight:bold}
+.track{background:#dce9ed;height:12px;border-radius:10px;overflow:hidden;margin:12px 0}
+.fill{background:#087f82;height:100%;transition:width .3s}
+.good{color:#147342}
+.bad{color:#b32626}
+.feedback{padding:16px;background:#f5f8fa;border-radius:10px;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left}
+footer{text-align:center;padding:25px;color:#526d79;font-size:13px}
+.hidden{display:none!important}
+.scroll{overflow-x:auto}
+@media(max-width:750px){
+.split{grid-template-columns:1fr}
+.passage{position:static}
+main{padding:10px}
+.card{padding:16px}
+header h1{font-size:36px}
+}
 </style>
 </head>
 <body>
 <header>
+<div lang="ar" dir="rtl">الثانوية الثامنة والعشرون</div>
 <h1>STEP UP</h1>
-<h3>Practice Makes Progress</h3>
-<p>28th Secondary School</p>
+<h2>Practice Makes Progress</h2>
+<p>Learn • Practice • Improve • Achieve</p>
 </header>
 <main>
-<section class="card" id="welcome">
+<section id="home" class="card">
 <h2>Welcome to STEP UP!</h2>
-<p>Enter your name to start your diagnostic test.</p>
-<input id="student" placeholder="Student name">
-<button onclick="start()">Start Test</button>
+<label>Student's name or practice ID</label>
+<input type="text" id="student" placeholder="Enter your name or ID">
+<label>Grade / Class</label>
+<input type="text" id="grade" placeholder="Example: Grade 12 – Class 1">
+<h2>Choose your test</h2>
+<div id="models" class="grid"></div>
+<button class="secondary" onclick="showProgress()">My Progress</button>
+<p>Use a practice ID on shared devices.</p>
 </section>
-<section class="card" id="quiz">
-<h2>Diagnostic Test</h2>
-<p>Time remaining: <b id="timer"></b></p>
+
+<section id="exam" class="card hidden">
+<div class="timerbar">
+<span id="sectionTitle"></span>
+<span class="timer" id="timer"></span>
+</div>
+<div class="track"><div id="progressBar" class="fill"></div></div>
+<p id="instructions"></p>
+<div id="audioStatus"></div>
+<div id="layout">
+<article id="passage" class="passage hidden"></article>
 <div id="questions"></div>
-<button onclick="submitTest()">Submit Answers</button>
+</div>
+<button id="next" onclick="nextSection()">Submit Section</button>
 </section>
-<section class="card" id="result">
-<h2>Your Results</h2>
+
+<section id="results" class="card hidden">
+<h2>Your Performance Report</h2>
+<div id="summary"></div>
+<h2>Detailed Feedback</h2>
 <div id="feedback"></div>
-<button onclick="location.reload()">Try Again</button>
+<button onclick="goHome()">Back to Home</button>
+<button class="secondary" onclick="showProgress()">My Progress</button>
+</section>
+
+<section id="history" class="card hidden">
+<h2>My Learning Progress</h2>
+<div id="historyContent" class="scroll"></div>
+<button onclick="goHome()">Back to Home</button>
 </section>
 </main>
 <footer>
-Prepared by Mrs. Aishah Abdullah Alwagdani
-<p>STEP Practice Simulation – Not an Official Question Bank</p>
+<div lang="ar" dir="rtl">إعداد المعلمة عائشة عبدالله الوقداني</div>
+<p>Prepared by Mrs. Aishah Abdullah Alwagdani</p>
+<p>AI-generated training material. STEP Practice Simulation – Not an Official Question Bank.</p>
 </footer>
 <script>
-const questions=[
-{q:"She ___ English every day.",a:["study","studies","studying"],correct:1,why:"Use studies with she in the present simple."},
-{q:"If I had known, I ___ earlier.",a:["will come","would come","would have come"],correct:2,why:"The third conditional uses would have + past participle."},
-{q:"The word 'significant' means:",a:["important","ordinary","unclear"],correct:0,why:"Significant means important or meaningful."},
-{q:"Neither of the students ___ absent.",a:["are","is","were"],correct:1,why:"Neither takes a singular verb in formal English."},
-{q:"Choose the synonym of 'accurate'.",a:["precise","careless","temporary"],correct:0,why:"Accurate and precise both describe correctness."}
+"use strict";
+const Q=(q,a,c,e)=>({q,a,c,e});
+
+const reading=[
+{
+title:"Learning Beyond Memorization",
+text:`For decades, academic success was frequently associated with the ability to memorize large amounts of information. However, contemporary educational research suggests that remembering facts is only one component of effective learning. Students who actively retrieve information, explain concepts in their own words and apply knowledge to unfamiliar situations tend to develop a more durable understanding.
+
+One particularly effective technique is retrieval practice. Instead of repeatedly reading a textbook, learners attempt to recall its contents without looking at the original material. Although this process may feel more demanding, the effort involved can strengthen long-term memory.
+
+Another important factor is the distribution of study sessions. Studying for several shorter periods over a week generally produces better retention than concentrating the same amount of study into a single evening. This approach allows the brain to consolidate information between sessions.
+
+Nevertheless, no single strategy guarantees success for every learner. Effective education requires a combination of suitable methods, meaningful feedback and consistent effort. The ultimate goal is not merely to pass examinations but to develop the ability to learn independently throughout life.`,
+qs:[
+Q("What is the main purpose of the passage?",["To criticize all examinations","To explain effective learning strategies","To promote longer textbooks","To discourage independent study"],1,"The passage explains retrieval, distributed practice and effective learning."),
+Q("The word 'durable' is closest in meaning to:",["Temporary","Complicated","Long-lasting","Uncertain"],2,"Durable means able to last."),
+Q("Retrieval practice involves:",["Recalling information without consulting the source","Copying every paragraph","Reading the same text continuously","Avoiding challenging material"],0,"Retrieval means actively recalling information."),
+Q("What can be inferred about intensive one-night study?",["It guarantees success","It requires no effort","It is always impossible","It may be less effective for long-term retention"],3,"Distributed study generally improves retention."),
+Q("The author views effective education as:",["Entirely dependent on memory","A combination of strategies and effort","Unnecessary outside school","Dependent on one universal method"],1,"The final paragraph emphasizes several methods and consistent effort.")
+]},
+{
+title:"Restoring Urban Ecosystems",
+text:`As cities expand, natural habitats are increasingly replaced by buildings, roads and other infrastructure. This transformation can reduce biodiversity, increase surface temperatures and disrupt the natural movement of water. Urban planners are therefore exploring ways to integrate ecological systems into densely populated environments.
+
+Green roofs, for instance, provide space for vegetation on buildings. Besides offering habitats for insects and birds, they can absorb rainfall and reduce the amount of heat absorbed by conventional roofing materials. Urban wetlands perform a related function by storing excess rainwater and filtering certain pollutants before water enters rivers.
+
+Nevertheless, environmental restoration is not simply a matter of planting more trees. Selecting species that are appropriate for the local climate is essential. Introducing unsuitable plants may increase water consumption or threaten native species.
+
+Successful restoration also depends on community involvement. Residents who understand the benefits of green spaces are more likely to participate in maintaining them. Consequently, urban ecological projects are most effective when scientific knowledge, careful planning and public cooperation are combined. Their benefits can extend beyond environmental protection to include improved physical and psychological well-being.`,
+qs:[
+Q("What is the central idea?",["Cities should stop developing","Urban restoration requires coordinated ecological planning","Wetlands are harmful to cities","Buildings should be removed"],1,"The passage discusses coordinated restoration."),
+Q("Green roofs can help cities by:",["Increasing surface heat","Eliminating all pollution","Reducing heat and absorbing rainfall","Preventing all construction"],2,"These are two stated benefits."),
+Q("The word 'native' means:",["Naturally occurring in a place","Recently invented","Artificially produced","Highly expensive"],0,"Native species originate in the local environment."),
+Q("Why is community involvement important?",["It replaces scientific knowledge","It prevents rainfall","It eliminates maintenance costs","It encourages continued maintenance"],3,"Informed residents are more likely to maintain projects."),
+Q("Which statement reflects the author's position?",["Any plant is suitable","Restoration requires careful species selection","Urban wetlands have no value","Only scientists benefit"],1,"Species should suit the local climate.")
+]},
+{
+title:"Artificial Intelligence and Human Judgment",
+text:`Artificial intelligence is increasingly used to support decisions in medicine, education and business. By identifying patterns in large collections of data, AI systems can perform certain analytical tasks more rapidly than humans. Their efficiency has encouraged organizations to adopt automated tools for activities that previously required considerable time.
+
+However, speed should not be confused with reliability. An AI system learns from the information available during its development. If that information is incomplete or unrepresentative, its predictions may reflect existing inequalities or produce misleading conclusions.
+
+Another challenge concerns transparency. Some advanced systems generate recommendations through processes that are difficult to explain. When decisions affect people's opportunities or well-being, understanding the reasons behind those decisions becomes particularly important.
+
+Rather than treating AI as a replacement for human expertise, many researchers advocate a collaborative approach. Machines can process information efficiently, while humans can evaluate context, ethical considerations and unexpected circumstances. Such collaboration requires continuous monitoring and a willingness to question automated recommendations.
+
+Ultimately, the value of artificial intelligence depends not only on its technical capabilities but also on how responsibly it is designed and used.`,
+qs:[
+Q("What is the author's main argument?",["AI should replace all experts","AI should be prohibited","AI is valuable when used responsibly with human judgment","AI is always reliable"],2,"The passage supports responsible collaboration."),
+Q("Why might AI predictions be misleading?",["Training data may be unrepresentative","Computers cannot process information","Humans never make mistakes","AI cannot recognize patterns"],0,"Poor data can produce misleading predictions."),
+Q("Transparency refers to:",["Processing speed","Hardware cost","Data quantity","The ability to understand how decisions are made"],3,"Transparency concerns explainability."),
+Q("The word 'advocate' means:",["Reject","Support","Hide","Measure"],1,"To advocate is to support a position."),
+Q("What can be inferred?",["Human oversight remains important","AI eliminates ethical concerns","All automated decisions are fair","Monitoring is unnecessary"],0,"The author emphasizes human evaluation and monitoring.")
+]},
+{
+title:"The Science of Athletic Recovery",
+text:`Athletic improvement is often associated with intensive training. Yet the period following exercise is equally important because the body requires time to adapt to physical demands. Without adequate recovery, repeated training may lead to declining performance rather than improvement.
+
+During strenuous activity, muscles experience temporary fatigue and small-scale tissue damage. Recovery allows physiological processes to repair tissues and restore energy reserves. Nutrition, hydration and sufficient sleep contribute significantly to these processes.
+
+Sleep is particularly valuable because several biological mechanisms associated with tissue repair operate during rest. Athletes who consistently obtain insufficient sleep may experience slower reaction times, reduced concentration and impaired decision-making.
+
+Recovery strategies should nevertheless be individualized. An experienced endurance athlete may tolerate workloads that would overwhelm a beginner. Coaches must therefore consider training history, physical condition and the intensity of previous exercise when designing schedules.
+
+Modern sports science increasingly emphasizes the relationship between training and recovery. Instead of regarding rest as a sign of weakness, athletes are encouraged to recognize it as a necessary component of sustainable performance. Long-term progress depends on balancing effort with the body's capacity to adapt.`,
+qs:[
+Q("What is the main theme?",["Recovery is essential for sustainable athletic progress","Athletes should avoid training","Sleep replaces nutrition","All athletes need identical schedules"],0,"The passage explains the importance of recovery."),
+Q("Insufficient sleep may cause:",["Faster reactions","Greater concentration","Improved judgment","Slower reactions"],3,"Slower reactions are explicitly mentioned."),
+Q("The word 'impaired' means:",["Improved","Weakened","Measured","Repeated"],1,"Impaired means reduced in effectiveness."),
+Q("Why should recovery be individualized?",["All athletes are beginners","Nutrition is unnecessary","Athletes have different capacities and training histories","Rest prevents adaptation"],2,"Recovery needs vary among individuals."),
+Q("What does the author suggest about rest?",["It is part of effective training","It should always be avoided","It indicates failure","It is unrelated to performance"],0,"Rest supports adaptation and performance.")
+]},
+{
+title:"Media Literacy in the Digital Age",
+text:`Digital platforms have transformed the way information is produced and distributed. Individuals can now publish content instantly and reach audiences that were once accessible only to major media organizations. While this development has expanded opportunities for communication, it has also created challenges for evaluating information.
+
+Online platforms frequently recommend content based on previous user behavior. These recommendations can make information more relevant to individual interests, but they may also limit exposure to alternative perspectives. Over time, users may encounter a narrow range of opinions without realizing how their information environment has been shaped.
+
+Media literacy involves more than identifying false statements. It requires understanding the purpose of a message, examining its evidence and recognizing the distinction between factual reporting and personal interpretation. Readers should also consider whether an emotionally powerful headline accurately represents the information that follows.
+
+Education plays an important role in developing these abilities. By comparing sources and investigating the origins of claims, learners can become more independent consumers of information. The objective is not to distrust everything online but to develop a thoughtful and evidence-based approach to digital communication.`,
+qs:[
+Q("What is the main purpose?",["To recommend avoiding the internet","To explain the importance of media literacy","To promote emotional headlines","To eliminate online communication"],1,"The passage explains critical evaluation of digital information."),
+Q("Recommendations may limit:",["Internet speed","Publication costs","Exposure to different viewpoints","The number of websites"],2,"Personalization may narrow perspectives."),
+Q("The word 'origins' means:",["Sources or beginnings","Consequences","Prices","Errors"],0,"Origins are sources or beginnings."),
+Q("A media-literate reader should:",["Believe every headline","Ignore evidence","Reject all online information","Compare sources and evaluate claims"],3,"Critical comparison is recommended."),
+Q("The author's attitude toward digital media is:",["Completely hostile","Balanced and analytical","Entirely uncritical","Indifferent"],1,"The passage recognizes both benefits and challenges.")
+]},
+{
+title:"Literature and Cultural Memory",
+text:`Literature serves not only as a form of artistic expression but also as a means of preserving cultural memory. Through stories, poetry and dramatic works, societies communicate experiences, values and concerns across generations. Literary texts can reveal aspects of everyday life that may receive little attention in conventional historical records.
+
+However, literature should not be regarded as a straightforward record of historical events. Writers select details, construct characters and organize narratives according to artistic purposes. Consequently, a novel may communicate the emotional atmosphere of a particular period without providing an entirely accurate account of its events.
+
+Translation extends the cultural significance of literature by allowing readers to encounter experiences beyond their own linguistic communities. Nevertheless, translators face the challenge of preserving meaning while adapting expressions that may have no direct equivalent in another language.
+
+Contemporary readers can benefit from examining literary works in relation to their historical and cultural contexts. Such an approach encourages them to recognize both differences and shared human experiences. Literature therefore provides opportunities for cultural understanding while reminding readers that human experience cannot always be reduced to a single interpretation.`,
+qs:[
+Q("What is the central theme?",["Literature is less useful than history","Translation should be avoided","Literature preserves and communicates cultural experience","All novels are historically accurate"],2,"The passage explores literature and cultural memory."),
+Q("Why is literature not a direct historical record?",["Writers make artistic choices","Readers cannot understand stories","Historical events never appear in novels","Poetry contains no meaning"],0,"Writers select and organize material artistically."),
+Q("The word 'equivalent' means:",["An unrelated expression","A historical document","An incorrect translation","Something with corresponding meaning"],3,"An equivalent has a corresponding meaning."),
+Q("Translation enables readers to:",["Avoid other cultures","Encounter experiences from other linguistic communities","Eliminate cultural differences","Read only historical records"],1,"Translation provides access across languages."),
+Q("What can be inferred?",["Literary interpretation may benefit from cultural context","Every story has one interpretation","Literature cannot preserve experiences","All translations are identical"],0,"The passage supports contextual interpretation.")
+]}
 ];
-let seconds=questions.length*60;
-let interval;
-function start(){
-const name=document.getElementById("student").value.trim();
-if(!name){alert("Please enter your name.");return}
-document.getElementById("welcome").style.display="none";
-document.getElementById("quiz").style.display="block";
-document.getElementById("questions").innerHTML=questions.map((x,i)=>
-`<div class="question"><h3>${i+1}. ${x.q}</h3>`+
-x.a.map((a,j)=>`<label><input type="radio" name="q${i}" value="${j}"> ${a}</label>`).join("")+
-`</div>`).join("");
-tick();
-interval=setInterval(()=>{seconds--;tick();if(seconds<=0)submitTest()},1000);
-}
-function tick(){
-document.getElementById("timer").textContent=
-Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0");
-}
-function submitTest(){
-clearInterval(interval);
-document.getElementById("quiz").style.display="none";
-document.getElementById("result").style.display="block";
-let score=0;
-let output="";
-questions.forEach((x,i)=>{
-const chosen=document.querySelector(`input[name="q${i}"]:checked`);
-const answer=chosen?Number(chosen.value):-1;
-if(answer===x.correct)score++;
-output+=`<p><b>Question ${i+1}:</b> ${answer===x.correct?"Correct":"Incorrect"}<br>Correct answer: ${x.a[x.correct]}<br>${x.why}</p>`;
+
+const listening=[
+{
+text:`A university recently introduced a mentoring programme for first-year students. Initially, participation was voluntary, and relatively few students registered. Interviews revealed that many students were unaware of the programme's benefits. The university therefore organized introductory workshops and invited experienced students to describe their own experiences. Participation increased considerably. Interestingly, the most significant improvement was not in examination scores but in students' confidence and willingness to seek academic support. The university now plans to expand the programme while continuing to evaluate its effectiveness.`,
+qs:[
+Q("What was the programme designed for?",["University teachers","First-year students","School principals","Graduates"],1,"It was introduced for first-year students."),
+Q("Why was initial participation low?",["It was expensive","It was compulsory","Students lacked awareness","There were no mentors"],2,"Students did not know its benefits."),
+Q("How did the university respond?",["It organized workshops","It cancelled the programme","It increased fees","It removed examinations"],0,"Introductory workshops were organized."),
+Q("What improved most?",["Attendance fees","Examination length","Library facilities","Student confidence"],3,"Confidence and willingness to seek support improved most."),
+Q("What will happen next?",["The programme will close","It will expand and be evaluated","Mentors will be dismissed","All exams will be cancelled"],1,"Expansion and evaluation are planned.")
+]},
+{
+text:`Researchers investigating water consumption in a coastal town discovered that household demand increased sharply during summer. Although tourism contributed to the increase, inefficient irrigation systems were also responsible. The local authority introduced a programme encouraging residents to replace traditional watering methods with more efficient alternatives. Rather than imposing immediate penalties, officials provided practical demonstrations and financial incentives. After one year, water consumption had declined despite a slight increase in population. Researchers cautioned, however, that continued monitoring would be necessary to determine whether these improvements could be maintained.`,
+qs:[
+Q("When did demand increase sharply?",["Winter","Spring","Summer","Autumn"],2,"The speaker mentions summer."),
+Q("Besides tourism, what caused the increase?",["Inefficient irrigation","Reduced population","Heavy rainfall","Industrial closure"],0,"Irrigation systems contributed."),
+Q("What did officials provide?",["Immediate penalties","Free holidays","New roads","Demonstrations and incentives"],3,"They provided demonstrations and financial incentives."),
+Q("What happened after one year?",["Population disappeared","Water consumption declined","Tourism ended","Demand doubled"],1,"Water use declined."),
+Q("Why is further monitoring needed?",["To assess long-term sustainability","To remove all irrigation","To increase consumption","To prevent tourism"],0,"Researchers want to know whether improvements will last.")
+]},
+{
+text:`A technology company tested a new application designed to help employees organize their work. During the initial trial, participants reported that the application saved time when managing routine tasks. However, some employees found the frequent notifications distracting. The development team responded by allowing users to customize notification settings. A second trial showed higher satisfaction, particularly among employees whose work required sustained concentration. The company concluded that successful technology should accommodate different working preferences rather than impose identical procedures on everyone.`,
+qs:[
+Q("What was the application designed to do?",["Organize work","Replace employees","Teach languages","Manage sports events"],0,"It helped employees organize work."),
+Q("What problem was identified?",["High electricity use","Missing passwords","Slow internet","Distracting notifications"],3,"Notifications distracted some employees."),
+Q("How was the problem addressed?",["The app was removed","Notification settings became customizable","Employees changed jobs","All tasks were cancelled"],1,"Users could customize notifications."),
+Q("Who particularly benefited?",["Visitors","Customers","Employees needing sustained concentration","New investors"],2,"These employees reported higher satisfaction."),
+Q("What was the conclusion?",["Technology should accommodate different preferences","Every worker needs identical procedures","Notifications are always harmful","Applications cannot save time"],0,"The company emphasized flexibility.")
+]},
+{
+text:`A sports researcher examined the relationship between exercise intensity and motivation among recreational runners. Participants were divided into two groups. One followed a demanding schedule, while the other gradually increased its training intensity. Although the first group initially improved more rapidly, several participants stopped attending sessions after reporting fatigue. The second group demonstrated steadier improvement and higher participation throughout the study. The researcher emphasized that the findings did not mean intensive exercise was unsuitable for everyone. Instead, training programmes should reflect individual experience and realistic long-term goals.`,
+qs:[
+Q("Who participated in the study?",["Professional swimmers","Recreational runners","Football coaches","Medical students"],1,"The study involved recreational runners."),
+Q("What distinguished the second group?",["They did not exercise","They trained only once","They gradually increased intensity","They followed the hardest schedule"],2,"Their intensity increased gradually."),
+Q("Why did some participants stop attending?",["Fatigue","Travel costs","Bad weather","Lack of equipment"],0,"Fatigue was reported."),
+Q("Which group maintained higher participation?",["Neither group","Both equally","The first group","The second group"],3,"The second group maintained participation."),
+Q("What did the researcher recommend?",["Avoiding all intensive exercise","Matching training to individual experience","Training without goals","Using identical schedules"],1,"Training should reflect individual experience.")
+]},
+{
+text:`A community radio station launched a project to encourage young people to participate in local discussions. At first, the station relied on traditional interviews, but audience feedback suggested that younger listeners preferred shorter, interactive formats. Producers introduced weekly discussions in which listeners could submit questions before each broadcast. The change attracted a wider audience and generated more varied viewpoints. Nevertheless, the station maintained its policy of verifying factual claims before broadcasting them. Its director argued that audience participation and editorial responsibility should complement each other rather than compete.`,
+qs:[
+Q("What was the project's aim?",["To sell radios","To replace journalists","To encourage youth participation","To reduce broadcasts"],2,"It encouraged young people to participate."),
+Q("What format did younger listeners prefer?",["Shorter interactive formats","Long lectures","Printed newspapers","Silent broadcasts"],0,"They preferred shorter interactive formats."),
+Q("How could listeners participate?",["By paying fees","By buying equipment","By visiting another station","By submitting questions"],3,"Questions could be submitted before broadcasts."),
+Q("Which policy was maintained?",["Avoiding young listeners","Verifying factual claims","Broadcasting without preparation","Rejecting feedback"],1,"Factual verification continued."),
+Q("What did the director emphasize?",["Participation and responsibility can work together","Accuracy prevents participation","Radio should avoid discussion","Audience opinions are always facts"],0,"The two should complement each other.")
+]},
+{
+text:`A museum developed an exhibition exploring traditional storytelling. Instead of displaying written descriptions alone, curators included recorded narratives and objects associated with different communities. Visitors were invited to compare the themes appearing in stories from several regions. The exhibition revealed that although storytelling traditions differed in language and setting, many addressed similar concerns, including family relationships, courage and responsibility. Curators were careful not to suggest that cultural differences were unimportant. Their objective was to encourage appreciation of both distinctive traditions and shared human experiences.`,
+qs:[
+Q("What was the exhibition about?",["Modern architecture","Scientific discoveries","Traditional storytelling","Athletic achievement"],2,"It explored storytelling traditions."),
+Q("What did curators include?",["Recorded narratives and objects","Only paintings","Only textbooks","Computer examinations"],0,"Recordings and objects were included."),
+Q("What were visitors invited to compare?",["Ticket prices","Museum buildings","Languages only","Themes in stories"],3,"They compared themes from different regions."),
+Q("What did many stories share?",["Identical settings","Similar human concerns","The same author","Identical vocabulary"],1,"Many addressed family, courage and responsibility."),
+Q("What was the main objective?",["Appreciating differences and shared experiences","Removing cultural differences","Proving one tradition superior","Discouraging storytelling"],0,"The exhibition valued both differences and similarities.")
+]}
+];
+
+const grammar=[
+[
+Q("She ___ English every day.",["study","studies","studying","studied"],1,"Use the present simple with habitual actions."),
+Q("If I had known, I ___ earlier.",["will come","would come","would have come","had come"],2,"Third conditional: would have + past participle."),
+Q("The report ___ yesterday.",["was completed","completes","is completing","has complete"],0,"Use the past simple passive."),
+Q("By next June, she ___ the course.",["finished","finishes","has finished","will have finished"],3,"The future perfect describes completion before a future point."),
+Q("Rarely ___ such dedication.",["we see","do we see","we are seeing","we saw"],1,"Negative adverbials at the beginning require inversion.")
+],
+[
+Q("Water ___ at 100°C at standard atmospheric pressure.",["boil","boiling","boils","boiled"],2,"Scientific facts use the present simple."),
+Q("The trees ___ last spring.",["were planted","plant","have planting","are plant"],0,"Past passive: were + past participle."),
+Q("She has lived here ___ 2020.",["for","during","until","since"],3,"Since introduces a starting point."),
+Q("If rainfall decreases, crops ___ less water.",["received","will receive","would received","had received"],1,"First conditional uses will + base verb."),
+Q("Not only ___ energy, but it also reduces waste.",["it saves","it saving","does it save","it saved"],2,"Not only at the beginning triggers inversion.")
+],
+[
+Q("My laptop ___ working yesterday.",["stopped","stop","stopping","has stop"],0,"Yesterday requires the past simple."),
+Q("The device ___ by thousands of people.",["uses","using","has use","is used"],3,"Present passive: is used."),
+Q("I wish I ___ more about programming.",["know","knew","will know","am knowing"],1,"Wish about the present takes a past form."),
+Q("The engineer suggested ___ the system.",["to restart","restart","restarting","restarted"],2,"Suggest is followed by a gerund."),
+Q("Had the system been tested, the error ___ detected.",["would have been","will be","is","has"],0,"Inverted third conditional requires would have been.")
+],
+[
+Q("They ___ football at the moment.",["play","played","plays","are playing"],3,"At the moment indicates the present continuous."),
+Q("She is interested ___ swimming.",["on","in","at","for"],1,"The correct combination is interested in."),
+Q("He runs ___ than his brother.",["fastest","fast","faster","more fast"],2,"Faster is the comparative form."),
+Q("The coach made us ___ harder.",["train","to train","training","trained"],0,"Make + object + base verb."),
+Q("Only after the match ___ how tired she was.",["she realized","she realizes","she had realized","did she realize"],3,"Only after at the beginning triggers inversion.")
+],
+[
+Q("There ___ many articles online.",["is","are","was","be"],1,"Use are with plural nouns."),
+Q("The journalist asked where I ___.",["live yesterday","do live","lived","am live"],2,"Reported questions use statement word order."),
+Q("The article, ___ was published yesterday, attracted attention.",["which","who","where","what"],0,"Which refers to a thing."),
+Q("You ___ verify a claim before sharing it.",["would to","ought","can to","should"],3,"Should expresses advice."),
+Q("Despite ___ tired, she finished the report.",["be","being","was","to be"],1,"Despite is followed by a noun or gerund.")
+],
+[
+Q("He ___ a novel last week.",["reads","reading","read","has read"],2,"Last week indicates the past simple."),
+Q("This book is ___ than that one.",["more interesting","most interesting","interest","interestingly"],0,"Long adjectives form comparatives with more."),
+Q("The poem ___ into several languages so far.",["translates","is translating","has translate","has been translated"],3,"Use the present perfect passive."),
+Q("She enjoys ___ historical novels.",["read","reading","to reading","reads"],1,"Enjoy takes a gerund."),
+Q("Were I the author, I ___ the ending.",["change","will change","would change","had changed"],2,"Were I is an inverted second conditional.")
+]
+];
+
+const vocabulary=[
+[
+Q("Significant means:",["Important","Ordinary","Unclear","Unnecessary"],0,"Significant means important."),
+Q("Choose the synonym of accurate.",["Careless","Precise","Temporary","Incorrect"],1,"Accurate means precise or correct."),
+Q("To retain information is to:",["Forget it","Destroy it","Keep it","Hide it from everyone"],2,"Retain means keep."),
+Q("A consistent learner studies:",["Rarely","Accidentally","Unpredictably","Regularly"],3,"Consistent means regular and steady."),
+Q("To consolidate knowledge means to:",["Strengthen it","Reject it","Misinterpret it","Remove it"],0,"Consolidate means make stronger.")
+],
+[
+Q("A habitat is:",["A machine","A natural living environment","A chemical","A building material"],1,"A habitat is an organism's natural environment."),
+Q("Scarce resources are:",["Unlimited","Unnecessary","Limited","Artificial"],2,"Scarce means insufficient or limited."),
+Q("To absorb water means to:",["Take it in","Throw it away","Freeze it","Measure its temperature"],0,"Absorb means take in."),
+Q("Sustainable development aims to:",["Waste resources","Increase pollution","Ignore the future","Meet needs without exhausting resources"],3,"Sustainability considers long-term needs."),
+Q("Biodiversity refers to:",["Weather patterns","The variety of living organisms","Industrial production","Water pressure"],1,"Biodiversity is biological variety.")
+],
+[
+Q("Efficient means:",["Wasteful","Unreliable","Productive with minimal waste","Outdated"],2,"Efficiency involves using resources effectively."),
+Q("An innovation is:",["A new idea or method","An old error","A natural disaster","A repeated failure"],0,"Innovation involves novelty."),
+Q("To monitor a system means to:",["Ignore it","Destroy it","Replace it immediately","Observe and check it"],3,"Monitor means observe carefully."),
+Q("A reliable source is:",["Confusing","Trustworthy","Temporary","Unknown"],1,"Reliable means dependable."),
+Q("An algorithm is:",["A set of computational instructions","A physical exercise","A cultural festival","A natural habitat"],0,"An algorithm is a procedure or set of instructions.")
+],
+[
+Q("Endurance is the ability to:",["Avoid activity","Sleep quickly","Change direction","Continue an activity over time"],3,"Endurance involves sustained effort."),
+Q("Fatigue means:",["Confidence","Extreme tiredness","Excitement","Strength"],1,"Fatigue means tiredness."),
+Q("Adequate recovery means:",["Excessive recovery","No recovery","Sufficient recovery","Unexpected recovery"],2,"Adequate means sufficient."),
+Q("To enhance performance means to:",["Improve it","Prevent it","Measure it only","Ignore it"],0,"Enhance means improve."),
+Q("A strenuous activity requires:",["No attention","Little movement","No preparation","Considerable effort"],3,"Strenuous means physically or mentally demanding.")
+],
+[
+Q("Credible information is:",["Always emotional","Believable and trustworthy","Always entertaining","Impossible to verify"],1,"Credible means believable."),
+Q("A biased report is:",["Completely neutral","Unpublished","Unfairly favoring one viewpoint","Always accurate"],2,"Bias involves unfair preference."),
+Q("To verify a claim means to:",["Check its accuracy","Share it immediately","Make it shorter","Ignore its source"],0,"Verify means confirm accuracy."),
+Q("A perspective is:",["A broadcast device","A newspaper price","A computer program","A point of view"],3,"Perspective means viewpoint."),
+Q("Misleading content may:",["Clarify every detail","Create a false impression","Always provide evidence","Prevent confusion"],1,"Misleading means likely to create a false impression.")
+],
+[
+Q("A narrative is:",["A scientific instrument","A sports competition","An account of events","A mathematical formula"],2,"A narrative is a story or account."),
+Q("To preserve a tradition means to:",["Protect and maintain it","Forget it","Replace it immediately","Reject its value"],0,"Preserve means protect or maintain."),
+Q("Heritage refers to:",["Future technology","Personal income","Daily weather","Inherited cultural traditions"],3,"Heritage is cultural inheritance."),
+Q("Distinctive means:",["Identical","Characteristically different","Unimportant","Invisible"],1,"Distinctive means having recognizable differences."),
+Q("To interpret a text means to:",["Explain its meaning","Count its pages","Erase its words","Copy its title"],0,"Interpret means explain or understand meaning.")
+]
+];
+
+const titles=[
+"Diagnostic Test",
+"Practice Test 1",
+"Practice Test 2",
+"Practice Test 3",
+"Practice Test 4",
+"Practice Test 5"
+];
+const themes=[
+"Learning & Education",
+"Science & Environment",
+"Technology & Innovation",
+"Sports & Health",
+"Society & Media",
+"Literature & Culture"
+];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const letters=["A","B","C","D"];
+let model=0,section=0,sections=[],records=[];
+let clock=null,deadline=0,phase="",locked=false;
+let student="",grade="",started=0,run=0;
+let active=false;
+let audio=null;
+
+$("models").innerHTML=titles.map((t,i)=>`
+<div class="model">
+<h3>${t}</h3>
+<p>${themes[i]}</p>
+<p>20 questions · 25 min + audio preparation</p>
+<button onclick="startTest(${i})">Start Test</button>
+</div>`).join("");
+
+function page(id){
+["home","exam","results","history"].forEach(x=>{
+$(x).classList.toggle("hidden",x!==id);
 });
-document.getElementById("feedback").innerHTML=
-`<h3>Score: ${score}/${questions.length}</h3>`+output;
+window.scrollTo(0,0);
 }
+
+function stopAudio(){
+if("speechSynthesis" in window)window.speechSynthesis.cancel();
+audio=null;
+}
+
+function startTest(i){
+student=$("student").value.trim();
+grade=$("grade").value.trim();
+if(!student){alert("Please enter your name or practice ID.");return;}
+if(!grade){alert("Please enter your grade or class.");return;}
+model=i;section=0;records=[];started=Date.now();active=true;
+sections=[
+{name:"Reading Comprehension",qs:reading[i].qs,seconds:90},
+{name:"Listening Comprehension",qs:listening[i].qs,seconds:90},
+{name:"Grammar",qs:grammar[i],seconds:60},
+{name:"Vocabulary",qs:vocabulary[i],seconds:60}
+];
+renderSection();
+}
+
+function renderSection(){
+clearInterval(clock);
+stopAudio();
+run++;
+locked=false;
+const s=sections[section];
+page("exam");
+$("sectionTitle").textContent=`${section+1}/4 — ${s.name}`;
+$("progressBar").style.width=(section/4*100)+"%";
+$("audioStatus").innerHTML="";
+$("layout").className=section===0?"split":"";
+$("passage").classList.toggle("hidden",section!==0);
+$("passage").innerHTML=section===0?
+`<h2>${reading[model].title}</h2>`+
+reading[model].text.split("\n\n").map(p=>`<p>${esc(p)}</p>`).join(""):"";
+$("instructions").textContent=section===0?
+"Read the passage and choose the best answer.":
+section===1?
+"Read the questions before the recording begins.":
+"Choose the best answer. Only one option is correct.";
+$("questions").innerHTML=s.qs.map((q,i)=>`
+<div class="question">
+<strong>${i+1}. ${esc(q.q)}</strong>
+${q.a.map((a,j)=>`
+<label class="option">
+<input type="radio" name="q${i}" value="${j}">
+${letters[j]}. ${esc(a)}
+</label>`).join("")}
+</div>`).join("");
+$("next").disabled=false;
+$("next").textContent=section===3?"Finish Test":"Submit Section";
+if(section===1){
+$("next").disabled=true;
+setOptions(false);
+$("audioStatus").innerHTML="<p>Preparation time: 30 seconds. Audio will begin automatically.</p>";
+startClock(30,"prepare");
+}else{
+startClock(s.qs.length*s.seconds,"answer");
+}
+}
+
+function setOptions(enabled){
+$("questions").querySelectorAll("input").forEach(x=>x.disabled=!enabled);
+}
+
+function startClock(seconds,p){
+clearInterval(clock);
+phase=p;
+deadline=Date.now()+seconds*1000;
+updateClock();
+clock=setInterval(updateClock,200);
+}
+
+function updateClock(){
+const left=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+$("timer").textContent=(phase==="prepare"?"Preview: ":"")+
+Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
+$("timer").style.color=left<=15?"#ffb5a7":"white";
+if(left===0){
+clearInterval(clock);
+if(phase==="prepare")playListening();
+else nextSection(true);
+}
+}
+
+function playListening(){
+const current=run;
+phase="audio";
+$("timer").textContent="Audio";
+$("audioStatus").innerHTML=
+'<p>Listen carefully. The transcript is hidden.</p>';
+if(!("speechSynthesis" in window)){
+audioFallback("Audio is not supported in this browser.");
+return;
+}
+audio=new SpeechSynthesisUtterance(listening[model].text);
+audio.lang="en-US";
+audio.rate=.95;
+const voices=speechSynthesis.getVoices();
+const voice=voices.find(v=>v.lang==="en-US")||
+voices.find(v=>v.lang.startsWith("en"));
+if(voice)audio.voice=voice;
+audio.onend=()=>{
+if(current!==run)return;
+$("audioStatus").textContent="Recording finished.";
+beginListeningAnswers();
+};
+audio.onerror=()=>{
+if(current!==run)return;
+audioFallback("Automatic playback failed. Tap Play Audio.");
+};
+$("audioStatus").innerHTML+=
+'<button onclick="playListening()">Play Audio if not heard</button>';
+speechSynthesis.cancel();
+speechSynthesis.speak(audio);
+}
+
+function audioFallback(message){
+$("audioStatus").innerHTML=
+`<p>${esc(message)}</p>
+<button onclick="playListening()">Play Audio</button>
+<button class="secondary" onclick="skipListening()">Skip Listening</button>`;
+}
+
+function beginListeningAnswers(){
+setOptions(true);
+$("next").disabled=false;
+startClock(sections[section].qs.length*90,"answer");
+}
+
+function skipListening(){
+if(section!==1)return;
+run++;
+stopAudio();
+records.push({
+name:sections[section].name,
+score:0,total:5,skipped:true,items:[]
+});
+section++;
+renderSection();
+}
+
+function nextSection(automatic=false){
+if(locked)return;
+if(section===1&&phase!=="answer")return;
+if(!automatic){
+const answered=$("questions").querySelectorAll("input:checked").length;
+if(answered<sections[section].qs.length&&
+!confirm("Some questions are unanswered. Submit this section?"))return;
+}
+locked=true;
+clearInterval(clock);
+run++;
+stopAudio();
+const s=sections[section];
+const items=s.qs.map((q,i)=>{
+const chosen=document.querySelector(`input[name="q${i}"]:checked`);
+return {...q,chosen:chosen?Number(chosen.value):-1};
+});
+records.push({
+name:s.name,
+score:items.filter(q=>q.chosen===q.c).length,
+total:items.length,items
+});
+section++;
+if(section<sections.length)renderSection();
+else finishTest();
+}
+
+function readHistory(){
+try{return JSON.parse(localStorage.getItem("stepup_history_v2")||"[]");}
+catch(e){return [];}
+}
+
+function finishTest(){
+active=false;
+clearInterval(clock);
+const score=records.reduce((n,r)=>n+r.score,0);
+const total=records.reduce((n,r)=>n+r.total,0);
+const percent=Math.round(score/total*100);
+const incomplete=records.some(r=>r.skipped);
+const level=incomplete?"Incomplete assessment":
+percent>=85?"Advanced":
+percent>=65?"Intermediate":
+percent>=40?"Developing":"Foundation";
+const record={
+student,grade,model:titles[model],
+date:new Date().toISOString(),
+percent,level,
+minutes:Math.round((Date.now()-started)/60000),
+skills:records.map(r=>({
+name:r.name,score:r.score,total:r.total,skipped:!!r.skipped
+}))
+};
+let saved=true;
+try{
+const history=readHistory();
+history.push(record);
+localStorage.setItem("stepup_history_v2",JSON.stringify(history));
+}catch(e){saved=false;}
+page("results");
+$("summary").innerHTML=`
+<h3>${esc(student)} — ${esc(grade)}</h3>
+<h2>${score}/${total} · ${percent}%</h2>
+<p>Estimated practice level: <strong>${level}</strong></p>
+<p>This is a training estimate, not an official STEP score.</p>
+${records.map(r=>`
+<p><strong>${r.name}</strong> — ${r.skipped?"Not assessed":r.score+"/"+r.total}</p>
+<div class="track"><div class="fill" style="width:${r.score/r.total*100}%"></div></div>
+`).join("")}
+<p>${saved?"Result saved on this device.":"Result could not be saved on this device."}</p>`;
+$("feedback").innerHTML=records.map(r=>`
+<h3>${r.name}</h3>
+${r.skipped?"<p>Listening was skipped.</p>":""}
+${r.items.map((q,i)=>`
+<div class="feedback">
+<strong>${i+1}. ${esc(q.q)}</strong>
+<p class="${q.chosen===q.c?"good":"bad"}">
+${q.chosen===q.c?"Correct":"Incorrect or unanswered"}</p>
+<p>Your answer: ${q.chosen<0?"Not answered":letters[q.chosen]+". "+esc(q.a[q.chosen])}</p>
+<p class="good">Correct answer: ${letters[q.c]}. ${esc(q.a[q.c])}</p>
+<p>Explanation: ${esc(q.e)}</p>
+</div>`).join("")}`).join("");
+}
+
+function showProgress(){
+student=$("student").value.trim();
+grade=$("grade").value.trim();
+if(!student||!grade){
+alert("Enter your name or practice ID and class first.");
+return;
+}
+const h=readHistory().filter(r=>r.student===student&&r.grade===grade);
+page("history");
+if(!h.length){
+$("historyContent").textContent="No completed tests on this device.";
+return;
+}
+const complete=h.filter(r=>r.level!=="Incomplete assessment");
+const first=complete[0];
+const latest=complete[complete.length-1];
+const change=first&&latest?latest.percent-first.percent:0;
+$("historyContent").innerHTML=`
+<p>Completed attempts: ${h.length}</p>
+<p>First complete score: ${first?first.percent+"%":"N/A"}</p>
+<p>Latest complete score: ${latest?latest.percent+"%":"N/A"}</p>
+<p>Score change: ${complete.length>1?(change>=0?"+":"")+change+" percentage points":"More attempts needed"}</p>
+<p>Different test models may vary in difficulty.</p>
+${h.map(r=>`
+<div class="feedback">
+<strong>${esc(r.model)} — ${r.percent}%</strong>
+<p>${new Date(r.date).toLocaleDateString()} · ${esc(r.level)}</p>
+<div class="track"><div class="fill" style="width:${r.percent}%"></div></div>
+${r.skills.map(s=>`<div>${esc(s.name)}: ${s.skipped?"Not assessed":s.score+"/"+s.total}</div>`).join("")}
+</div>`).join("")}
+<p>History is stored locally and is not synchronized across devices.</p>`;
+}
+
+function goHome(){
+active=false;
+run++;
+clearInterval(clock);
+stopAudio();
+page("home");
+}
+
+window.addEventListener("beforeunload",e=>{
+if(active){e.preventDefault();e.returnValue="";}
+});
 </script>
 </body>
 </html>
