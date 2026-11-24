@@ -19,7 +19,7 @@ button{background:#087f82;color:white;border:0;padding:12px 20px;border-radius:8
 button:hover{background:#075e65}
 button:disabled{opacity:.5;cursor:not-allowed}
 .secondary{background:#38566c}
-input[type=text],select{width:100%;padding:13px;border:1px solid #b9cbd2;border-radius:8px;font-size:16px;margin:7px 0 15px}
+input[type=text],input[type=email],input[type=password],select{width:100%;padding:13px;border:1px solid #b9cbd2;border-radius:8px;font-size:16px;margin:7px 0 15px}
 .question{padding:16px 0;border-bottom:1px solid #dbe6ea}
 .option{display:block;border:1px solid #dbe6ea;padding:10px;margin:8px 0;border-radius:8px;cursor:pointer}
 .option:hover{background:#edf9f8}
@@ -55,7 +55,9 @@ header h1{font-size:36px}
 <p>Learn • Practice • Improve • Achieve</p>
 </header>
 <main>
-<section id="home" class="card">
+<section id="login" class="card"><h2>STEP UP — Sign in</h2><label>Email</label><input id="email" type="email" autocomplete="username"><label>Password</label><input id="password" type="password" autocomplete="current-password"><label>Full name (new students)</label><input id="signupName" type="text"><label>Grade / Class (new students)</label><input id="signupGrade" type="text"><button onclick="authenticate(false)">Sign in</button> <button onclick="authenticate(true)">Create student account</button><p id="authStatus" role="status"></p></section>
+<section id="teacher" class="card hidden"><h2>Teacher Dashboard</h2><button onclick="teacherReport()">Refresh reports</button> <button onclick="exportReport()">Export CSV</button> <button onclick="signOut()">Sign out</button><div id="report" class="scroll"></div></section>
+<section id="home" class="card hidden"><button class="secondary" onclick="signOut()">Sign out</button>
 <h2>Welcome to STEP UP!</h2>
 <label>Student's name or practice ID</label>
 <input type="text" id="student" placeholder="Enter your name or ID">
@@ -64,7 +66,7 @@ header h1{font-size:36px}
 <h2>Choose your test</h2>
 <div id="models" class="grid"></div>
 <button class="secondary" onclick="showProgress()">My Progress</button>
-<p>Use a practice ID on shared devices.</p>
+<p>Sign out after using a shared device.</p>
 </section>
 
 <section id="exam" class="card hidden">
@@ -102,6 +104,7 @@ header h1{font-size:36px}
 <p>Prepared by Mrs. Aishah Abdullah Alwagdani</p>
 <p>AI-generated training material. STEP Practice Simulation – Not an Official Question Bank.</p>
 </footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 "use strict";
 const Q=(q,a,c,e)=>({q,a,c,e});
@@ -391,7 +394,7 @@ $("models").innerHTML=titles.map((t,i)=>`
 </div>`).join("");
 
 function page(id){
-["home","exam","results","history"].forEach(x=>{
+["login","teacher","home","exam","results","history"].forEach(x=>{
 $(x).classList.toggle("hidden",x!==id);
 });
 window.scrollTo(0,0);
@@ -403,6 +406,7 @@ audio=null;
 }
 
 function startTest(i){
+ if(!profile || profile.role!=="student")return;
 student=$("student").value.trim();
 grade=$("grade").value.trim();
 if(!student){alert("Please enter your name or practice ID.");return;}
@@ -451,8 +455,8 @@ $("next").textContent=section===3?"Finish Test":"Submit Section";
 if(section===1){
 $("next").disabled=true;
 setOptions(false);
-$("audioStatus").innerHTML="<p>Preparation time: 30 seconds. Audio will begin automatically.</p>";
-startClock(30,"prepare");
+$("audioStatus").innerHTML="<p>Preparation time: 60 seconds. Audio will begin automatically.</p>";
+startClock(60,"prepare");
 }else{
 startClock(s.qs.length*s.seconds,"answer");
 }
@@ -566,12 +570,8 @@ if(section<sections.length)renderSection();
 else finishTest();
 }
 
-function readHistory(){
-try{return JSON.parse(localStorage.getItem("stepup_history_v2")||"[]");}
-catch(e){return [];}
-}
 
-function finishTest(){
+async function finishTest(){
 active=false;
 clearInterval(clock);
 const score=records.reduce((n,r)=>n+r.score,0);
@@ -591,12 +591,6 @@ skills:records.map(r=>({
 name:r.name,score:r.score,total:r.total,skipped:!!r.skipped
 }))
 };
-let saved=true;
-try{
-const history=readHistory();
-history.push(record);
-localStorage.setItem("stepup_history_v2",JSON.stringify(history));
-}catch(e){saved=false;}
 page("results");
 $("summary").innerHTML=`
 <h3>${esc(student)} — ${esc(grade)}</h3>
@@ -607,7 +601,7 @@ ${records.map(r=>`
 <p><strong>${r.name}</strong> — ${r.skipped?"Not assessed":r.score+"/"+r.total}</p>
 <div class="track"><div class="fill" style="width:${r.score/r.total*100}%"></div></div>
 `).join("")}
-<p>${saved?"Result saved on this device.":"Result could not be saved on this device."}</p>`;
+<p><span id="saveStatus">Saving result…</span> <button id="retrySave" class="hidden" onclick="saveResult()">Retry saving</button></p>`;
 $("feedback").innerHTML=records.map(r=>`
 <h3>${r.name}</h3>
 ${r.skipped?"<p>Listening was skipped.</p>":""}
@@ -620,19 +614,23 @@ ${q.chosen===q.c?"Correct":"Incorrect or unanswered"}</p>
 <p class="good">Correct answer: ${letters[q.c]}. ${esc(q.a[q.c])}</p>
 <p>Explanation: ${esc(q.e)}</p>
 </div>`).join("")}`).join("");
+ pending={id:crypto.randomUUID(),record,score,total,duration:Math.round((Date.now()-started)/1000),records:structuredClone(records)}; await saveResult();
 }
 
-function showProgress(){
+async function showProgress(){
+ if(pending){alert("Please save your result first.");return;}
 student=$("student").value.trim();
 grade=$("grade").value.trim();
 if(!student||!grade){
 alert("Enter your name or practice ID and class first.");
 return;
 }
-const h=readHistory().filter(r=>r.student===student&&r.grade===grade);
-page("history");
+page("history"); $("historyContent").textContent="Loading…";
+ const {data,error}=await db.from("test_results").select("*,skill_results(*)").eq("student_id",profile.id).order("completed_at");
+ if(error){$("historyContent").textContent=error.message;return;}
+ const h=data.map(r=>({model:r.test_name,percent:Number(r.percentage??(100*r.correct_answers/r.total_questions)),level:r.level,date:r.completed_at,skills:r.skill_results.map(x=>({name:x.skill,score:x.correct_answers,total:x.total_questions,skipped:r.level==="Incomplete assessment"&&x.skill==="Listening Comprehension"}))}));
 if(!h.length){
-$("historyContent").textContent="No completed tests on this device.";
+$("historyContent").textContent="No completed tests yet.";
 return;
 }
 const complete=h.filter(r=>r.level!=="Incomplete assessment");
@@ -652,10 +650,11 @@ ${h.map(r=>`
 <div class="track"><div class="fill" style="width:${r.percent}%"></div></div>
 ${r.skills.map(s=>`<div>${esc(s.name)}: ${s.skipped?"Not assessed":s.score+"/"+s.total}</div>`).join("")}
 </div>`).join("")}
-<p>History is stored locally and is not synchronized across devices.</p>`;
+<p>History is stored in your account.</p>`;
 }
 
 function goHome(){
+ if(pending){alert("Please save your result first.");return;}
 active=false;
 run++;
 clearInterval(clock);
@@ -664,8 +663,39 @@ page("home");
 }
 
 window.addEventListener("beforeunload",e=>{
-if(active){e.preventDefault();e.returnValue="";}
+if(active||pending){e.preventDefault();e.returnValue="";}
 });
+
+const db=window.supabase?.createClient("https://kzivbgnifpikiwbxrfcd.supabase.co","sb_publishable_V74GhRKWhsttX-lKuFdDpA_aH17nntD");
+let profile=null,pending=null,saving=false,reportRows=[];
+async function authenticate(signup){
+ const status=$("authStatus");status.textContent="Please wait…";
+ try{
+ const email=$("email").value.trim(),password=$("password").value;
+ const full_name=$("signupName").value.trim(),grade_class=$("signupGrade").value.trim();
+ if(signup&&(!full_name||!grade_class))throw Error("Enter your name and class.");
+ const result=signup?await db.auth.signUp({email,password,options:{data:{full_name,grade_class}}}):await db.auth.signInWithPassword({email,password});
+ if(result.error)throw result.error;
+ if(!result.data.session){status.textContent="Check your email to confirm your account, then sign in.";return;}
+ await loadProfile(result.data.user);
+ }catch(e){status.textContent=e.message;}
+}
+async function loadProfile(user){
+ let {data,error}=await db.from("profiles").select("*").eq("id",user.id).maybeSingle();if(error)throw error;
+ if(!data){const full_name=user.user_metadata.full_name||$("signupName").value.trim(),grade_class=user.user_metadata.grade_class||$("signupGrade").value.trim();if(!full_name||!grade_class)throw Error("Enter your full name and class in the new student fields and sign in again.");const r=await db.from("profiles").insert({id:user.id,full_name,grade_class,role:"student"}).select().single();if(r.error)throw r.error;data=r.data;}
+ profile=data;$("password").value="";
+ if(data.role==="teacher"){page("teacher");await teacherReport();}else{$("student").value=data.full_name;$("grade").value=data.grade_class||"";$("student").readOnly=true;$("grade").readOnly=true;page("home");}
+}
+async function signOut(){if(pending||active)return;const {error}=await db.auth.signOut();if(error){alert(error.message);return;}profile=null;reportRows=[];page("login");$("authStatus").textContent="Signed out.";$("report").innerHTML="";$("historyContent").innerHTML="";$("summary").innerHTML="";$("feedback").innerHTML="";}
+async function saveResult(){if(!pending||saving)return;saving=true;const p=pending;$("retrySave").classList.add("hidden");try{
+ const {error}=await db.rpc("save_step_attempt",{attempt:{id:p.id,test_name:p.record.model,correct_answers:p.score,total_questions:p.total,level:p.record.level,duration_seconds:p.duration,skills:p.records.map(r=>({skill:r.name,correct_answers:r.score,total_questions:r.total})),answers:p.records.flatMap(r=>r.items.map((q,i)=>({skill:r.name,question_number:i+1,selected_answer:q.chosen<0?null:q.a[q.chosen],correct_answer:q.a[q.c],is_correct:q.chosen===q.c,explanation:q.e})))}});if(error)throw error;pending=null;$("saveStatus").textContent="Result saved to your account.";
+ }catch(e){$("saveStatus").textContent="Not saved: "+e.message;$("retrySave").classList.remove("hidden");}finally{saving=false;}}
+async function teacherReport(){if(profile?.role!=="teacher")return;reportRows=[];$("report").textContent="Loading…";try{let rows=[];for(let offset=0;;offset+=500){const {data,error}=await db.from("test_results").select("*,profiles(full_name,grade_class),skill_results(*)").order("completed_at",{ascending:false}).order("id").range(offset,offset+499);if(error)throw error;rows.push(...data);if(data.length<500)break;}
+ reportRows=rows; const groups=Object.create(null);for(const r of rows){const k=r.profiles?.grade_class||"Unassigned";(groups[k]??=[]).push(r);}const pct=r=>Number(r.percentage??100*r.correct_answers/r.total_questions);$("report").innerHTML=`<h3>Class summary</h3>${Object.entries(groups).map(([k,v])=>{const c=v.filter(r=>r.level!=="Incomplete assessment");return `<p>${esc(k)}: ${new Set(v.map(r=>r.student_id)).size} students · ${v.length} attempts · mean ${c.length?(c.reduce((n,r)=>n+pct(r),0)/c.length).toFixed(1)+"%":"N/A"}</p>`}).join("")}<h3>Individual attempts</h3><table><tr><th>Student</th><th>Class</th><th>Test</th><th>Score</th><th>Level</th><th>Skills</th><th>Date</th></tr>${rows.map(r=>`<tr><td>${esc(r.profiles?.full_name||"")}</td><td>${esc(r.profiles?.grade_class||"")}</td><td>${esc(r.test_name)}</td><td>${pct(r)}%</td><td>${esc(r.level)}</td><td>${r.skill_results.map(x=>esc(x.skill)+": "+x.correct_answers+"/"+x.total_questions).join("<br>")}</td><td>${esc(new Date(r.completed_at).toLocaleString())}</td></tr>`).join("")}</table>`;
+ }catch(e){$("report").textContent=e.message;}}
+function exportReport(){if(profile?.role!=="teacher"||!reportRows.length){alert("No results to export.");return;}const cell=v=>{let t=String(v??"");if(/^[\s]*[=+@-]/.test(t)||/^[\t\r\n]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};const rows=[["Student","Class","Test","Percentage","Level","Skills","Date"],...reportRows.map(r=>[r.profiles?.full_name,r.profiles?.grade_class,r.test_name,r.percentage??100*r.correct_answers/r.total_questions,r.level,r.skill_results.map(x=>x.skill+": "+x.correct_answers+"/"+x.total_questions).join("; "),r.completed_at])];const url=URL.createObjectURL(new Blob(["\uFEFF"+rows.map(r=>r.map(cell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="STEP_UP_results.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+(async()=>{try{if(!db)throw Error("Connection library unavailable. Check internet access.");const {data,error}=await db.auth.getUser();if(data?.user)await loadProfile(data.user);}catch(e){$("authStatus").textContent=e.message;}})();
+
 </script>
 </body>
 </html>
